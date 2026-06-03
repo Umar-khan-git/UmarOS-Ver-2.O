@@ -436,6 +436,8 @@ fun TodayTabScreen(viewModel: DashboardViewModel) {
     var showAddIntent by rememberSaveable { mutableStateOf(false) }
     var newHabitName by rememberSaveable { mutableStateOf("") }
     var newIntentName by rememberSaveable { mutableStateOf("") }
+    var editingHabit by remember { mutableStateOf<HabitEntity?>(null) }
+    var editingIntent by remember { mutableStateOf<IntentEntity?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -535,7 +537,18 @@ fun TodayTabScreen(viewModel: DashboardViewModel) {
                                             color = InstaOrange,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(end = 8.dp)
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { editingHabit = habit },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = Color.Gray.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
                                     IconButton(
@@ -643,6 +656,17 @@ fun TodayTabScreen(viewModel: DashboardViewModel) {
                                 }
 
                                 IconButton(
+                                    onClick = { editingIntent = intent },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Edit",
+                                        tint = Color.Gray.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                IconButton(
                                     onClick = { viewModel.deleteIntent(intent.id) },
                                     modifier = Modifier.size(28.dp)
                                 ) {
@@ -721,6 +745,92 @@ fun TodayTabScreen(viewModel: DashboardViewModel) {
                         ) {
                             Text("Cancel", color = Color.White)
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Edit Habit
+    editingHabit?.let { habit ->
+        var editName by remember(habit.id) { mutableStateOf(habit.name) }
+        Dialog(onDismissRequest = { editingHabit = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Habit", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                if (editName.isNotBlank()) {
+                                    viewModel.editHabit(habit, editName.trim())
+                                    editingHabit = null
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Save", color = Color.White) }
+                        Button(
+                            onClick = { editingHabit = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Cancel", color = Color.White) }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Edit Intent
+    editingIntent?.let { intent ->
+        var editName by remember(intent.id) { mutableStateOf(intent.name) }
+        Dialog(onDismissRequest = { editingIntent = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Intent", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                if (editName.isNotBlank()) {
+                                    viewModel.editIntent(intent, editName.trim())
+                                    editingIntent = null
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Save", color = Color.White) }
+                        Button(
+                            onClick = { editingIntent = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Cancel", color = Color.White) }
                     }
                 }
             }
@@ -811,6 +921,9 @@ fun GoalsTabScreen(viewModel: DashboardViewModel) {
 
     var logActivityName by remember { mutableStateOf("") }
     var logHours by remember { mutableStateOf("") }
+
+    var editingGoal by remember { mutableStateOf<GoalEntity?>(null) }
+    var editingLog by remember { mutableStateOf<PointLogEntity?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -945,6 +1058,18 @@ fun GoalsTabScreen(viewModel: DashboardViewModel) {
                             }
 
                             IconButton(
+                                onClick = { editingGoal = goal },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    tint = Color.Gray.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+
+                            IconButton(
                                 onClick = { viewModel.deleteGoal(goal.id) },
                                 modifier = Modifier.size(28.dp)
                             ) {
@@ -985,6 +1110,15 @@ fun GoalsTabScreen(viewModel: DashboardViewModel) {
                                         color = InstaOrange,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Edit Log",
+                                        tint = Color.Gray.copy(0.5f),
+                                        modifier = Modifier
+                                            .size(13.dp)
+                                            .clickable { editingLog = log }
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
@@ -1157,6 +1291,104 @@ fun GoalsTabScreen(viewModel: DashboardViewModel) {
 }
 
 
+    // Modal: Edit Goal
+    editingGoal?.let { goal ->
+        var editName by remember(goal.id) { mutableStateOf(goal.name) }
+        var editWhy by remember(goal.id) { mutableStateOf(goal.why) }
+        var editStatus by remember(goal.id) { mutableStateOf(goal.status) }
+        Dialog(onDismissRequest = { editingGoal = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Goal", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedTextField(
+                        value = editName, onValueChange = { editName = it },
+                        placeholder = { Text("Goal name", color = MutedText) },
+                        colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editWhy, onValueChange = { editWhy = it },
+                        placeholder = { Text("Why this goal?", color = MutedText) },
+                        colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("ACTIVE", "NEXT", "SOMEDAY").forEach { s ->
+                            Box(
+                                modifier = Modifier.weight(1f)
+                                    .background(if (editStatus == s) InstaGradient else Brush.linearGradient(listOf(Color(0xFF2A2A2A), Color(0xFF2A2A2A))), shape = RoundedCornerShape(10.dp))
+                                    .clickable { editStatus = s }.padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) { Text(s, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                if (editName.isNotBlank()) {
+                                    viewModel.editGoal(goal, editName.trim(), editWhy.trim(), editStatus)
+                                    editingGoal = null
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandAccent), modifier = Modifier.weight(1f)
+                        ) { Text("Save") }
+                        Button(onClick = { editingGoal = null }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.weight(1f)) { Text("Cancel") }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Edit Log
+    editingLog?.let { log ->
+        var editActivity by remember(log.id) { mutableStateOf(log.activity) }
+        var editHours by remember(log.id) { mutableStateOf(log.hours.toString()) }
+        Dialog(onDismissRequest = { editingLog = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Log Entry", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedTextField(
+                        value = editActivity, onValueChange = { editActivity = it },
+                        placeholder = { Text("Activity description", color = MutedText) },
+                        colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editHours, onValueChange = { editHours = it },
+                        placeholder = { Text("Hours", color = MutedText) },
+                        colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                val hrs = editHours.toFloatOrNull() ?: 0f
+                                if (editActivity.isNotBlank() && hrs > 0f) {
+                                    viewModel.editPointLog(log, editActivity.trim(), hrs)
+                                    editingLog = null
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandAccent), modifier = Modifier.weight(1f)
+                        ) { Text("Save") }
+                        Button(onClick = { editingLog = null }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.weight(1f)) { Text("Cancel") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 // ============================================
 // LEARNING TAB SCREEN (5 SUB-TABS)
 // ============================================
@@ -1178,6 +1410,9 @@ fun LearningTabScreen(viewModel: DashboardViewModel) {
     var wordOriginal by remember { mutableStateOf("") }
     var wordEnglish by remember { mutableStateOf("") }
     var wordLangCat by remember { mutableStateOf("ARABIC") }
+
+    var editingItem by remember { mutableStateOf<LearningEntity?>(null) }
+    var editingWord by remember { mutableStateOf<WordEntity?>(null) }
 
     Column(
         modifier = Modifier
@@ -1287,6 +1522,9 @@ fun LearningTabScreen(viewModel: DashboardViewModel) {
                                 )
                             }
 
+                            IconButton(onClick = { editingItem = item }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray.copy(0.6f))
+                            }
                             IconButton(onClick = { viewModel.deleteLearning(item.id) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(0.6f))
                             }
@@ -1372,6 +1610,9 @@ fun LearningTabScreen(viewModel: DashboardViewModel) {
                                         }
                                     }
 
+                                    IconButton(onClick = { editingWord = item }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray.copy(0.6f))
+                                    }
                                     IconButton(onClick = { viewModel.deleteWord(item.id) }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(0.6f))
                                     }
@@ -1560,6 +1801,79 @@ fun LearningTabScreen(viewModel: DashboardViewModel) {
 }
 
 
+    // Modal: Edit Topic
+    editingItem?.let { item ->
+        var eName by remember(item.id) { mutableStateOf(item.name) }
+        var eSubtext by remember(item.id) { mutableStateOf(item.subtext) }
+        var eCat by remember(item.id) { mutableStateOf(item.category) }
+        var eStatus by remember(item.id) { mutableStateOf(item.status) }
+        Dialog(onDismissRequest = { editingItem = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Topic", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedTextField(value = eName, onValueChange = { eName = it }, placeholder = { Text("Topic name", color = MutedText) }, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = eSubtext, onValueChange = { eSubtext = it }, placeholder = { Text("Focus note", color = MutedText) }, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth())
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf("IT", "COURSES", "LANGUAGES").forEach { cat ->
+                            Box(modifier = Modifier.weight(1f).background(if (eCat == cat) InstaGradient else Brush.linearGradient(listOf(Color(0xFF2A2A2A), Color(0xFF2A2A2A))), shape = RoundedCornerShape(8.dp)).clickable { eCat = cat }.padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text(cat, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf("ACTIVE", "NEXT", "SOMEDAY").forEach { s ->
+                            Box(modifier = Modifier.weight(1f).background(if (eStatus == s) InstaGradient else Brush.linearGradient(listOf(Color(0xFF2A2A2A), Color(0xFF2A2A2A))), shape = RoundedCornerShape(8.dp)).clickable { eStatus = s }.padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text(s, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { if (eName.isNotBlank()) { viewModel.editLearning(item, eName.trim(), eSubtext.trim(), eCat, eStatus); editingItem = null } }, colors = ButtonDefaults.buttonColors(containerColor = BrandAccent), modifier = Modifier.weight(1f)) { Text("Save") }
+                        Button(onClick = { editingItem = null }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.weight(1f)) { Text("Cancel") }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Edit Word
+    editingWord?.let { word ->
+        var eWord by remember(word.id) { mutableStateOf(word.word) }
+        var eMeaning by remember(word.id) { mutableStateOf(word.meaning) }
+        var eLang by remember(word.id) { mutableStateOf(word.category) }
+        Dialog(onDismissRequest = { editingWord = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Word", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedTextField(value = eWord, onValueChange = { eWord = it }, placeholder = { Text("Word", color = MutedText) }, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = eMeaning, onValueChange = { eMeaning = it }, placeholder = { Text("English meaning", color = MutedText) }, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF2A2A2A), unfocusedContainerColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth())
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf("ARABIC", "JAPANESE", "ENGLISH").forEach { lang ->
+                            Box(modifier = Modifier.weight(1f).background(if (eLang == lang) InstaGradient else Brush.linearGradient(listOf(Color(0xFF2A2A2A), Color(0xFF2A2A2A))), shape = RoundedCornerShape(8.dp)).clickable { eLang = lang }.padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text(lang, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { if (eWord.isNotBlank() && eMeaning.isNotBlank()) { viewModel.editWord(word, eWord.trim(), eMeaning.trim(), eLang); editingWord = null } }, colors = ButtonDefaults.buttonColors(containerColor = BrandAccent), modifier = Modifier.weight(1f)) { Text("Save") }
+                        Button(onClick = { editingWord = null }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.weight(1f)) { Text("Cancel") }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ============================================
 // SLEEP TAB SCREEN
 // ============================================
@@ -1569,6 +1883,7 @@ fun SleepTabScreen(viewModel: DashboardViewModel) {
 
     var sleptHour by remember { mutableStateOf("01:00") }
     var wakeHour by remember { mutableStateOf("05:30") }
+    var editingSleep by remember { mutableStateOf<SleepLogEntity?>(null) }
 
     // Analytics computation
     val averageSlept = remember(sleepLogs) {
@@ -1827,6 +2142,9 @@ fun SleepTabScreen(viewModel: DashboardViewModel) {
                             modifier = Modifier.padding(end = 6.dp)
                         )
 
+                        IconButton(onClick = { editingSleep = logEntry }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray.copy(0.6f))
+                        }
                         IconButton(onClick = { viewModel.deleteSleepLog(logEntry.dateString) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(0.6f))
                         }
@@ -1835,6 +2153,50 @@ fun SleepTabScreen(viewModel: DashboardViewModel) {
             }
         }
         item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+
+    // Modal: Edit Sleep Log
+    editingSleep?.let { log ->
+        var eSlept by remember(log.id) { mutableStateOf(log.sleptAt) }
+        var eWake by remember(log.id) { mutableStateOf(log.wokeUp) }
+        Dialog(onDismissRequest = { editingSleep = null }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, BorderHighlight),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Edit Sleep Log (${log.dateString})", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = eSlept, onValueChange = { eSlept = it },
+                            label = { Text("Slept At (HH:MM)", fontSize = 10.sp) },
+                            colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF222222), unfocusedContainerColor = Color(0xFF1E1E1E)),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = eWake, onValueChange = { eWake = it },
+                            label = { Text("Wake At (HH:MM)", fontSize = 10.sp) },
+                            colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color(0xFF222222), unfocusedContainerColor = Color(0xFF1E1E1E)),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                if (eSlept.isNotBlank() && eWake.isNotBlank()) {
+                                    viewModel.editSleepLog(log, eSlept.trim(), eWake.trim())
+                                    editingSleep = null
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandAccent), modifier = Modifier.weight(1f)
+                        ) { Text("Save", color = Color.White) }
+                        Button(onClick = { editingSleep = null }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray), modifier = Modifier.weight(1f)) { Text("Cancel", color = Color.White) }
+                    }
+                }
+            }
+        }
     }
 }
 
