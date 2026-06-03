@@ -1165,81 +1165,142 @@ fun StatsSubScreen(
                         Canvas(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp)
+                                .height(380.dp)
                         ) {
                             val canvasW = size.width
                             val canvasH = size.height
-                            val pieRadius = minOf(canvasW, canvasH) * 0.28f
+                            val pieRadius = minOf(canvasW, canvasH) * 0.24f
                             val centerX = canvasW / 2f
                             val centerY = canvasH / 2f
-                            val labelFontSize = with(density) { 9.5.sp.toPx() }
-                            val lineLength1 = pieRadius * 0.30f
-                            val lineLength2 = pieRadius * 0.24f
+                            val labelFontSize = with(density) { 8.5.sp.toPx() }
+                            val minLabelGap = labelFontSize * 1.55f
 
+                            val n = mainSlices.size
+                            val startAngles = FloatArray(n)
+                            val sweepAngles = FloatArray(n)
+                            val midRads = DoubleArray(n)
+                            val pcts = DoubleArray(n)
+
+                            // Pass 1: compute geometry for every slice
                             var currentAngle = -90f
-
-                            mainSlices.forEachIndexed { index, (cat, amnt) ->
+                            mainSlices.forEachIndexed { idx, (_, amnt) ->
                                 val sweep = if (totalAmount > 0.0) ((amnt / totalAmount) * 360f).toFloat() else 0f
-                                val col = colorPalette.getOrElse(index) { Color.Gray }
+                                startAngles[idx] = currentAngle
+                                sweepAngles[idx] = sweep
+                                midRads[idx] = Math.toRadians((currentAngle + sweep / 2f).toDouble())
+                                pcts[idx] = if (totalAmount > 0.0) (amnt / totalAmount) * 100.0 else 0.0
+                                currentAngle += sweep
+                            }
 
+                            // Pass 2: draw all arcs
+                            mainSlices.forEachIndexed { idx, _ ->
+                                val col = colorPalette.getOrElse(idx) { Color.Gray }
                                 drawArc(
                                     color = col,
-                                    startAngle = currentAngle,
-                                    sweepAngle = sweep,
+                                    startAngle = startAngles[idx],
+                                    sweepAngle = sweepAngles[idx],
                                     useCenter = true,
                                     topLeft = androidx.compose.ui.geometry.Offset(centerX - pieRadius, centerY - pieRadius),
                                     size = androidx.compose.ui.geometry.Size(pieRadius * 2, pieRadius * 2)
                                 )
                                 drawArc(
                                     color = Color(0xFF111111),
-                                    startAngle = currentAngle,
-                                    sweepAngle = sweep,
+                                    startAngle = startAngles[idx],
+                                    sweepAngle = sweepAngles[idx],
                                     useCenter = true,
                                     topLeft = androidx.compose.ui.geometry.Offset(centerX - pieRadius, centerY - pieRadius),
                                     size = androidx.compose.ui.geometry.Size(pieRadius * 2, pieRadius * 2),
                                     style = Stroke(width = 1.5f)
                                 )
+                            }
 
-                                val pct = if (totalAmount > 0.0) (amnt / totalAmount) * 100.0 else 0.0
-                                val midAngleDeg = currentAngle + sweep / 2f
-                                val midAngleRad = Math.toRadians(midAngleDeg.toDouble())
-                                val edgeX = centerX + pieRadius * cos(midAngleRad).toFloat()
-                                val edgeY = centerY + pieRadius * sin(midAngleRad).toFloat()
-                                val line1X = centerX + (pieRadius + lineLength1) * cos(midAngleRad).toFloat()
-                                val line1Y = centerY + (pieRadius + lineLength1) * sin(midAngleRad).toFloat()
-                                val goRight = line1X >= centerX
-                                val line2X = line1X + (if (goRight) lineLength2 else -lineLength2)
-                                val line2Y = line1Y
+                            // Split indices by side, sorted by natural Y so stacking is top-to-bottom
+                            val rightIdx = (0 until n).filter { cos(midRads[it]) >= 0 }
+                                .sortedBy { sin(midRads[it]) }
+                            val leftIdx = (0 until n).filter { cos(midRads[it]) < 0 }
+                                .sortedBy { sin(midRads[it]) }
 
-                                drawLine(
-                                    color = col.copy(alpha = 0.8f),
-                                    start = androidx.compose.ui.geometry.Offset(edgeX, edgeY),
-                                    end = androidx.compose.ui.geometry.Offset(line1X, line1Y),
-                                    strokeWidth = 1.2f
-                                )
-                                drawLine(
-                                    color = col.copy(alpha = 0.8f),
-                                    start = androidx.compose.ui.geometry.Offset(line1X, line1Y),
-                                    end = androidx.compose.ui.geometry.Offset(line2X, line2Y),
-                                    strokeWidth = 1.2f
-                                )
-
-                                val labelText = "${cat.take(13)} ${String.format("%.1f", pct)}%"
-                                textPaint.color = android.graphics.Color.argb(
-                                    255,
-                                    (col.red * 255).toInt(),
-                                    (col.green * 255).toInt(),
-                                    (col.blue * 255).toInt()
-                                )
-                                textPaint.textSize = labelFontSize
-                                val textX = if (goRight) line2X + 4f else line2X - 4f - textPaint.measureText(labelText)
-                                val textY = line2Y + labelFontSize / 3f
-
-                                drawIntoCanvas {
-                                    it.nativeCanvas.drawText(labelText, textX, textY, textPaint)
+                            // Push labels apart until no two are closer than minLabelGap
+                            fun resolveY(indices: List<Int>): MutableList<Float> {
+                                val ys = indices.map {
+                                    (centerY + (pieRadius + 18f) * sin(midRads[it])).toFloat()
+                                }.toMutableList()
+                                repeat(50) {
+                                    for (i in 1 until ys.size) {
+                                        if (ys[i] - ys[i - 1] < minLabelGap) {
+                                            val mid = (ys[i] + ys[i - 1]) / 2f
+                                            ys[i - 1] = mid - minLabelGap / 2f
+                                            ys[i] = mid + minLabelGap / 2f
+                                        }
+                                    }
+                                    for (i in ys.size - 2 downTo 0) {
+                                        if (ys[i + 1] - ys[i] < minLabelGap) {
+                                            val mid = (ys[i + 1] + ys[i]) / 2f
+                                            ys[i] = mid - minLabelGap / 2f
+                                            ys[i + 1] = mid + minLabelGap / 2f
+                                        }
+                                    }
                                 }
+                                return ys
+                            }
 
-                                currentAngle += sweep
+                            val rightYs = resolveY(rightIdx)
+                            val leftYs  = resolveY(leftIdx)
+
+                            // Pass 3: draw leader lines + labels
+                            val rightAnchorX = centerX + pieRadius + 28f
+                            rightIdx.forEachIndexed { i, idx ->
+                                val col = colorPalette.getOrElse(idx) { Color.Gray }
+                                val labelY = rightYs[i]
+                                val edgeX = centerX + pieRadius * cos(midRads[idx]).toFloat()
+                                val edgeY = centerY + pieRadius * sin(midRads[idx]).toFloat()
+                                val kinkX = centerX + (pieRadius + 14f) * cos(midRads[idx]).toFloat()
+                                val kinkY = centerY + (pieRadius + 14f) * sin(midRads[idx]).toFloat()
+
+                                drawLine(col.copy(alpha = 0.7f),
+                                    start = androidx.compose.ui.geometry.Offset(edgeX, edgeY),
+                                    end = androidx.compose.ui.geometry.Offset(kinkX, kinkY), strokeWidth = 1f)
+                                drawLine(col.copy(alpha = 0.7f),
+                                    start = androidx.compose.ui.geometry.Offset(kinkX, kinkY),
+                                    end = androidx.compose.ui.geometry.Offset(rightAnchorX, labelY), strokeWidth = 1f)
+                                drawLine(col.copy(alpha = 0.7f),
+                                    start = androidx.compose.ui.geometry.Offset(rightAnchorX, labelY),
+                                    end = androidx.compose.ui.geometry.Offset(rightAnchorX + 10f, labelY), strokeWidth = 1f)
+
+                                val text = "${mainSlices[idx].first.take(11)} ${String.format("%.1f", pcts[idx])}%"
+                                textPaint.textSize = labelFontSize
+                                textPaint.textAlign = android.graphics.Paint.Align.LEFT
+                                textPaint.color = android.graphics.Color.argb(255,
+                                    (col.red * 255).toInt(), (col.green * 255).toInt(), (col.blue * 255).toInt())
+                                drawIntoCanvas { it.nativeCanvas.drawText(text, rightAnchorX + 12f, labelY + labelFontSize / 3f, textPaint) }
+                            }
+
+                            val leftAnchorX = centerX - pieRadius - 28f
+                            leftIdx.forEachIndexed { i, idx ->
+                                val col = colorPalette.getOrElse(idx) { Color.Gray }
+                                val labelY = leftYs[i]
+                                val edgeX = centerX + pieRadius * cos(midRads[idx]).toFloat()
+                                val edgeY = centerY + pieRadius * sin(midRads[idx]).toFloat()
+                                val kinkX = centerX + (pieRadius + 14f) * cos(midRads[idx]).toFloat()
+                                val kinkY = centerY + (pieRadius + 14f) * sin(midRads[idx]).toFloat()
+
+                                drawLine(col.copy(alpha = 0.7f),
+                                    start = androidx.compose.ui.geometry.Offset(edgeX, edgeY),
+                                    end = androidx.compose.ui.geometry.Offset(kinkX, kinkY), strokeWidth = 1f)
+                                drawLine(col.copy(alpha = 0.7f),
+                                    start = androidx.compose.ui.geometry.Offset(kinkX, kinkY),
+                                    end = androidx.compose.ui.geometry.Offset(leftAnchorX, labelY), strokeWidth = 1f)
+                                drawLine(col.copy(alpha = 0.7f),
+                                    start = androidx.compose.ui.geometry.Offset(leftAnchorX, labelY),
+                                    end = androidx.compose.ui.geometry.Offset(leftAnchorX - 10f, labelY), strokeWidth = 1f)
+
+                                val text = "${mainSlices[idx].first.take(11)} ${String.format("%.1f", pcts[idx])}%"
+                                textPaint.textSize = labelFontSize
+                                textPaint.textAlign = android.graphics.Paint.Align.RIGHT
+                                textPaint.color = android.graphics.Color.argb(255,
+                                    (col.red * 255).toInt(), (col.green * 255).toInt(), (col.blue * 255).toInt())
+                                drawIntoCanvas { it.nativeCanvas.drawText(text, leftAnchorX - 12f, labelY + labelFontSize / 3f, textPaint) }
+                                textPaint.textAlign = android.graphics.Paint.Align.LEFT
                             }
                         }
                     }
