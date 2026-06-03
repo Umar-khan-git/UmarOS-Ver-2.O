@@ -63,6 +63,9 @@ interface DashboardDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPointLog(log: PointLogEntity)
 
+    @Update
+    suspend fun updatePointLog(log: PointLogEntity)
+
     @Delete
     suspend fun deletePointLog(log: PointLogEntity)
 
