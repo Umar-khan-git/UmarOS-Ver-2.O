@@ -464,7 +464,8 @@ fun TransactionsSubScreen(
                                 items(itemsList) { tx ->
                                     TransactionRowItem(
                                         tx = tx,
-                                        onDelete = { viewModel.deleteTransaction(tx) }
+                                        onDelete = { viewModel.deleteTransaction(tx) },
+                                        onEdit = { updated -> viewModel.editTransaction(tx, updated) }
                                     )
                                     HorizontalDivider(color = BorderHighlight)
                                 }
@@ -505,15 +506,17 @@ fun TransactionsSubScreen(
 @Composable
 fun TransactionRowItem(
     tx: TransactionEntity,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: (TransactionEntity) -> Unit
 ) {
     var showDeleteAlert by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {},
+                onClick = { showEditDialog = true },
                 onLongClick = { showDeleteAlert = true }
             )
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -584,6 +587,14 @@ fun TransactionRowItem(
         )
     }
 
+    if (showEditDialog) {
+        EditTransactionDialog(
+            tx = tx,
+            onDismiss = { showEditDialog = false },
+            onSave = { updated -> onEdit(updated); showEditDialog = false }
+        )
+    }
+
     if (showDeleteAlert) {
         AlertDialog(
             onDismissRequest = { showDeleteAlert = false },
@@ -606,6 +617,131 @@ fun TransactionRowItem(
             },
             containerColor = Color(0xFF1E1E1E)
         )
+    }
+}
+
+// ============================================
+// EDIT TRANSACTION DIALOG
+// ============================================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditTransactionDialog(
+    tx: TransactionEntity,
+    onDismiss: () -> Unit,
+    onSave: (TransactionEntity) -> Unit
+) {
+    var amount by remember { mutableStateOf(tx.amount.toBigDecimal().stripTrailingZeros().toPlainString()) }
+    var category by remember { mutableStateOf(tx.category) }
+    var account by remember { mutableStateOf(tx.account) }
+    var note by remember { mutableStateOf(tx.note) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF1A1A1A),
+            border = BorderStroke(1.dp, BorderHighlight),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Edit Transaction",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = tx.type,
+                    color = if (tx.type == "EXPENSE") RedExpense else BlueIncome,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                TextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    label = { Text("Amount") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF222222),
+                        unfocusedContainerColor = Color(0xFF1E1E1E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text("Category") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF222222),
+                        unfocusedContainerColor = Color(0xFF1E1E1E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = account,
+                    onValueChange = { account = it },
+                    label = { Text("Account") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF222222),
+                        unfocusedContainerColor = Color(0xFF1E1E1E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("Note") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF222222),
+                        unfocusedContainerColor = Color(0xFF1E1E1E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val newAmount = amount.toDoubleOrNull() ?: tx.amount
+                            if (category.isNotBlank() && account.isNotBlank()) {
+                                onSave(
+                                    tx.copy(
+                                        amount = newAmount,
+                                        category = category.trim(),
+                                        account = account.trim(),
+                                        note = note.trim()
+                                    )
+                                )
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFD5A4E))
+                    ) {
+                        Text("Save", color = Color.White)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1024,17 +1160,7 @@ fun StatsSubScreen(
                             }
                         }
 
-                        // Group slices < 3% into "Others"
-                        val threshold = 3.0
-                        val mainSlices = remember(categoryTotals, totalAmount) {
-                            val big = categoryTotals.filter { (_, amnt) ->
-                                if (totalAmount > 0) (amnt / totalAmount) * 100.0 >= threshold else false
-                            }
-                            val smallTotal = categoryTotals
-                                .filter { (_, amnt) -> if (totalAmount > 0) (amnt / totalAmount) * 100.0 < threshold else false }
-                                .sumOf { it.second }
-                            if (smallTotal > 0) big + ("Others" to smallTotal) else big
-                        }
+                        val mainSlices = categoryTotals
 
                         Canvas(
                             modifier = Modifier
@@ -1098,7 +1224,7 @@ fun StatsSubScreen(
                                     strokeWidth = 1.2f
                                 )
 
-                                val labelText = "${cat.take(9)} ${String.format("%.1f", pct)}%"
+                                val labelText = "${cat.take(13)} ${String.format("%.1f", pct)}%"
                                 textPaint.color = android.graphics.Color.argb(
                                     255,
                                     (col.red * 255).toInt(),
@@ -1290,7 +1416,11 @@ fun AccountsSubScreen(
             }
 
             items(cashAccounts) { acc ->
-                AccountItemRow(acc = acc, onDelete = { viewModel.deleteMoneyAccount(acc.id) })
+                AccountItemRow(
+                    acc = acc,
+                    onDelete = { viewModel.deleteMoneyAccount(acc.id) },
+                    onEdit = { updated -> viewModel.editMoneyAccount(updated) }
+                )
                 HorizontalDivider(color = BorderHighlight)
             }
         }
@@ -1309,7 +1439,11 @@ fun AccountsSubScreen(
             }
 
             items(bankAccounts) { acc ->
-                AccountItemRow(acc = acc, onDelete = { viewModel.deleteMoneyAccount(acc.id) })
+                AccountItemRow(
+                    acc = acc,
+                    onDelete = { viewModel.deleteMoneyAccount(acc.id) },
+                    onEdit = { updated -> viewModel.editMoneyAccount(updated) }
+                )
                 HorizontalDivider(color = BorderHighlight)
             }
         }
@@ -1328,7 +1462,11 @@ fun AccountsSubScreen(
             }
 
             items(cardAccounts) { acc ->
-                AccountItemRow(acc = acc, onDelete = { viewModel.deleteMoneyAccount(acc.id) })
+                AccountItemRow(
+                    acc = acc,
+                    onDelete = { viewModel.deleteMoneyAccount(acc.id) },
+                    onEdit = { updated -> viewModel.editMoneyAccount(updated) }
+                )
                 HorizontalDivider(color = BorderHighlight)
             }
         }
@@ -1363,15 +1501,17 @@ fun AccountsSubScreen(
 @Composable
 fun AccountItemRow(
     acc: MoneyAccountEntity,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: (MoneyAccountEntity) -> Unit
 ) {
     var showDelete by remember { mutableStateOf(false) }
+    var showEdit by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {},
+                onClick = { showEdit = true },
                 onLongClick = { showDelete = true }
             )
             .padding(vertical = 12.dp),
@@ -1387,6 +1527,14 @@ fun AccountItemRow(
             color = if (acc.type == "CARD") RedExpense else BlueIncome,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold
+        )
+    }
+
+    if (showEdit) {
+        EditAccountDialog(
+            acc = acc,
+            onDismiss = { showEdit = false },
+            onSave = { updated -> onEdit(updated); showEdit = false }
         )
     }
 
@@ -1407,6 +1555,101 @@ fun AccountItemRow(
             },
             containerColor = Color(0xFF1A1A1A)
         )
+    }
+}
+
+// ============================================
+// EDIT ACCOUNT DIALOG COMPONENT
+// ============================================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditAccountDialog(
+    acc: MoneyAccountEntity,
+    onDismiss: () -> Unit,
+    onSave: (MoneyAccountEntity) -> Unit
+) {
+    var name by remember { mutableStateOf(acc.name) }
+    var selectedType by remember { mutableStateOf(acc.type) }
+    var balanceStr by remember { mutableStateOf(acc.balance.toBigDecimal().stripTrailingZeros().toPlainString()) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = DarkGreyBg,
+            border = BorderStroke(1.dp, BorderHighlight),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Edit Account", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Account Name") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF222222),
+                        unfocusedContainerColor = Color(0xFF1E1E1E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("CASH" to "Cash", "BANK" to "Bank", "CARD" to "Card").forEach { (typeVal, label) ->
+                        val isSel = selectedType == typeVal
+                        Button(
+                            onClick = { selectedType = typeVal },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSel) Color(0xFFFD5A4E) else Color(0xFF222222)
+                            ),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                TextField(
+                    value = balanceStr,
+                    onValueChange = { balanceStr = it },
+                    label = { Text("Balance") },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF222222),
+                        unfocusedContainerColor = Color(0xFF1E1E1E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val bal = balanceStr.toDoubleOrNull() ?: acc.balance
+                            if (name.isNotBlank()) {
+                                onSave(acc.copy(name = name.trim(), type = selectedType, balance = bal))
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFD5A4E))
+                    ) {
+                        Text("Save", color = Color.White)
+                    }
+                }
+            }
+        }
     }
 }
 
