@@ -28,6 +28,7 @@ class DashboardRepository(private val dao: DashboardDao) {
     val allPointLogs: Flow<List<PointLogEntity>> = dao.getAllPointLogs()
     fun getPointLogsForGoal(goalId: Long): Flow<List<PointLogEntity>> = dao.getPointLogsForGoal(goalId)
     suspend fun insertPointLog(log: PointLogEntity) = dao.insertPointLog(log)
+    suspend fun updatePointLog(log: PointLogEntity) = dao.updatePointLog(log)
     suspend fun deletePointLog(log: PointLogEntity) = dao.deletePointLog(log)
     suspend fun deletePointLogById(id: Long) = dao.deletePointLogById(id)
 
