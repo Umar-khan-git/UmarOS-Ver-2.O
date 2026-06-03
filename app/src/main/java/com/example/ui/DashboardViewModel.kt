@@ -470,6 +470,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         repository.deleteHabitById(id)
     }
 
+    fun editHabit(habit: HabitEntity, newName: String) = viewModelScope.launch {
+        repository.updateHabit(habit.copy(name = newName))
+    }
+
     // --- Intent Actions ---
     fun addIntent(name: String) = viewModelScope.launch {
         repository.insertIntent(IntentEntity(name = name))
@@ -481,6 +485,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     fun deleteIntent(id: Long) = viewModelScope.launch {
         repository.deleteIntentById(id)
+    }
+
+    fun editIntent(intent: IntentEntity, newName: String) = viewModelScope.launch {
+        repository.updateIntent(intent.copy(name = newName))
     }
 
     // --- Goal Actions ---
@@ -496,12 +504,20 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         repository.updateGoal(goal.copy(status = newStatus))
     }
 
+    fun editGoal(goal: GoalEntity, newName: String, newWhy: String, newStatus: String) = viewModelScope.launch {
+        repository.updateGoal(goal.copy(name = newName, why = newWhy, status = newStatus))
+    }
+
     fun deleteGoal(id: Long) = viewModelScope.launch {
         repository.deleteGoalById(id)
     }
 
     fun deletePointLog(id: Long) = viewModelScope.launch {
         repository.deletePointLogById(id)
+    }
+
+    fun editPointLog(log: PointLogEntity, activity: String, hours: Float) = viewModelScope.launch {
+        repository.updatePointLog(log.copy(activity = activity, hours = hours))
     }
 
     // --- Learning Actions ---
@@ -513,6 +529,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         repository.deleteLearningById(id)
     }
 
+    fun editLearning(item: LearningEntity, name: String, subtext: String, category: String, status: String) = viewModelScope.launch {
+        repository.updateLearning(item.copy(name = name, subtext = subtext, category = category, status = status))
+    }
+
     // --- Word Actions ---
     fun addWord(word: String, meaning: String, category: String) = viewModelScope.launch {
         repository.insertWord(WordEntity(word = word, meaning = meaning, category = category))
@@ -520,6 +540,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     fun deleteWord(id: Long) = viewModelScope.launch {
         repository.deleteWordById(id)
+    }
+
+    fun editWord(word: WordEntity, newWord: String, newMeaning: String, newCategory: String) = viewModelScope.launch {
+        repository.updateWord(word.copy(word = newWord, meaning = newMeaning, category = newCategory))
     }
 
     // --- Sleep Actions ---
@@ -537,6 +561,11 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     fun deleteSleepLog(dateString: String) = viewModelScope.launch {
         repository.deleteSleepLogByDate(dateString)
+    }
+
+    fun editSleepLog(log: SleepLogEntity, sleptAt: String, wokeUp: String) = viewModelScope.launch {
+        val newHours = calculateHoursSlept(sleptAt, wokeUp)
+        repository.updateSleepLog(log.copy(sleptAt = sleptAt, wokeUp = wokeUp, hoursSlept = newHours))
     }
 
     private fun calculateHoursSlept(sleptAt: String, wokeUp: String): Float {
@@ -597,6 +626,12 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
         updateBalancesAfterTxDelete(tx)
     }
 
+    fun editTransaction(oldTx: TransactionEntity, newTx: TransactionEntity) = viewModelScope.launch {
+        updateBalancesAfterTxDelete(oldTx)
+        repository.updateTransaction(newTx)
+        updateBalancesAfterTx(newTx.type, newTx.amount, newTx.account, newTx.toAccount)
+    }
+
     fun addMoneyAccount(name: String, type: String, initialBalance: Double) = viewModelScope.launch {
         repository.insertMoneyAccount(
             MoneyAccountEntity(
@@ -609,6 +644,10 @@ class DashboardViewModel(private val repository: DashboardRepository) : ViewMode
 
     fun deleteMoneyAccount(id: Long) = viewModelScope.launch {
         repository.deleteMoneyAccountById(id)
+    }
+
+    fun editMoneyAccount(account: MoneyAccountEntity) = viewModelScope.launch {
+        repository.updateMoneyAccount(account)
     }
 
     fun addCategory(name: String, type: String) = viewModelScope.launch {
