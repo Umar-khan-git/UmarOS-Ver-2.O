@@ -1288,8 +1288,6 @@ fun GoalsTabScreen(viewModel: DashboardViewModel) {
             }
         }
     }
-}
-
 
     // Modal: Edit Goal
     editingGoal?.let { goal ->
@@ -1798,8 +1796,6 @@ fun LearningTabScreen(viewModel: DashboardViewModel) {
             }
         }
     }
-}
-
 
     // Modal: Edit Topic
     editingItem?.let { item ->
